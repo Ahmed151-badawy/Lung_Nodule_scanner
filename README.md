@@ -25,26 +25,43 @@ An end-to-end, clinically calibrated Computer-Aided Detection & Diagnosis (CADe/
 - [Testing & Quality Assurance](#-testing--quality-assurance)
 - [Regulatory & Clinical Disclaimer](#-regulatory--clinical-disclaimer)
 
----
+A research-prototype Computer-Aided Diagnosis (CADx) and decision-support
+system for thoracic CT scans. It combines a lightweight CNN with the
+Fleischner Society 2017 guidelines and the Brock (PanCan) risk model, and
+exports DICOM Structured Reports and PDF reports.
 
-## 🚀 Key Features
+## Key Features
 
-* **Calibrated CT Radiodensity Ingestion:** Native 16-bit DICOM ingestion with automatic rescale slope and intercept mapping to Hounsfield Units (HU) and standard pulmonary parenchymal windowing ($L = -600, W = 1500 \implies [-1350, +150]\text{ HU}$).
-* **OOD Input Quality Gate:** Real-time out-of-distribution (OOD) detector evaluating CT attenuation distributions to block invalid modalities (e.g., MRI, Ultrasound) and unreadable empty air scans ($<-900\text{ HU}$).
-* **Compact, Resolution-Agnostic CNN:** Custom 4-stage convolutional backbone with Global Average Pooling (GAP) reducing parameters by **98.8%** (~388K params vs ~33.5M in dense architectures) with sub-50ms CPU inference via ONNX INT8 quantization.
-* **Post-Hoc Probability Calibration:** Temperature Scaling fitted on validation set logits to minimize Expected Calibration Error (ECE) and eliminate neural overconfidence.
-* **Leak-Free Explainability (XAI):** Context-managed gradient hooks for **Grad-CAM**, **Grad-CAM++**, **Score-CAM**, and **Integrated Gradients** ensuring zero PyTorch memory leaks during continuous PACS reading.
-* **RECIST 1.1 Morphometry & CTR:** Semi-automated contour segmentation measuring longest diameter ($d_{\text{long}}$), perpendicular short axis ($d_{\text{perp}}$), and Consolidation-to-Tumor Ratio (CTR) to classify solid, part-solid, and pure ground-glass nodules (GGN).
-* **Clinical Decision Support (CDSS):**
-  * **Fleischner Society 2017 Guidelines:** Automated stratification based on nodule attenuation, size cutoffs (<6 mm, 6–8 mm, >8 mm), multiplicity, and patient risk history.
-  * **Brock University (PanCan) Model:** Full multivariable logistic regression accounting for age, sex, cancer family history, emphysema, spiculation, and upper-lobe localization.
-* **Audit Lineage & Interoperable Reporting:**
-  * Cryptographic provenance stamping embedding Model SHA-256, Git Commit SHA, and DICOM Series Instance UID.
-  * Native binary **DICOM Part 10 Structured Reporting (TID 1500 SR)** generation.
-  * Publication-ready multi-page clinical PDF report generation via ReportLab.
-
----
-
+- **DICOM ingestion:** Reads 16-bit DICOM with pydicom, converts to
+  Hounsfield Units using rescale slope and intercept, and applies a lung
+  window (center -600 HU, width 1500 HU).
+- **Quality gate:** Rejects non-CT modalities and empty air slices
+  (below -900 HU) before inference.
+- **2.5D input:** Stacks three adjacent axial slices (z-1, z, z+1).
+- **Compact CNN:** `NoduleCNN` has 388,577 parameters (1-channel) and
+  389,153 (3-channel). Global Average Pooling replaces a 33.5M-parameter
+  dense layer and makes it resolution-agnostic.
+- **ONNX export:** FP32 and INT8 models. Measured on CPU over 50
+  iterations: FP32 25.22 ms per slice, INT8 31.36 ms per slice. INT8 is
+  not smaller or faster, because only MatMul/Gemm layers are quantized
+  and most weights are in Conv2d layers.
+- **Temperature scaling:** Implemented as a PyTorch module. The stored
+  temperature in `model/calibrator.pth` is 0.913. No before/after ECE
+  benchmark is included.
+- **Explainability:** Grad-CAM, Grad-CAM++, Score-CAM and Integrated
+  Gradients, with context-managed hooks. Hook cleanup is covered by tests.
+- **Morphometry:** RECIST 1.1 longest and perpendicular diameters and
+  Consolidation-to-Tumor Ratio, measured on a single axial slice by
+  region growing. Spiculation is a 2D contour heuristic.
+- **Clinical rules:** Fleischner 2017 decision rules and the Brock
+  (PanCan) logistic model (age, sex, family history, emphysema, size,
+  lobe, spiculation).
+- **Reporting:** DICOM Basic Text Structured Reports and multi-page PDF
+  reports (ReportLab), each stamped with the model SHA-256, Git commit
+  SHA and SeriesInstanceUID.
+- **Interfaces:** Tkinter desktop viewer and a FastAPI service
+  (`/health`, `/predict`, `/explain`) with Docker and Docker Compose.
+  
 ## 🏗️ System Architecture
 
 ```mermaid
@@ -218,6 +235,24 @@ python -m unittest discover tests
 
 ---
 
+## Current Status and Limitations
+
+- **No measured performance.** The repository contains no accuracy, AUC,
+  sensitivity or specificity results.
+- **Training pipeline not run on real data.** `scripts/train_lidc.py` and
+  `scripts/build_lidc_crops.py` are written for LIDC-IDRI but have not been
+  run against it. No patient data is included.
+- **No clinical validation.** The model has not been evaluated on a
+  clinical cohort.
+- **Single-slice measurement.** Nodule sizing uses one 2D axial slice, not
+  a 3D volume.
+- **Heuristic spiculation.** Based on a contour perimeter-to-area ratio.
+- **Testing:** 56 tests pass (`python -m unittest discover tests`).
+  Coverage is not measured.
+- **Sample reports:** `dist/` is generated by `scripts/verify_e2e.py` and
+  is not committed.
+
+  
 ## ⚖️ Regulatory & Clinical Disclaimer
 
 > [!CAUTION]
