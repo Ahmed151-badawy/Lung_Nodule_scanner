@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  pulmonary-nodule-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-unknown}
+    container_name: pulmonary-nodule-cadx
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PRODUCTION=1
+      - NODULE_DEMO=0
+      - LOG_LEVEL=INFO
+      - AUDIT_HMAC_KEY=${AUDIT_HMAC_KEY:-}
+    volumes:
+      - ./dist:/app/dist
+      - ./storage:/app/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+
