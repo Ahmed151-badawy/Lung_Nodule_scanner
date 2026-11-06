@@ -24,13 +24,11 @@ wheels/
 *.manifest
 *.spec
 
-# Model weights & checkpoints (exclude general checkpoints, but keep production weights)
+# Model weights & checkpoints are NOT versioned here (use Git LFS or a model registry).
+# The Dockerfile fails the build if model/*.pth is missing.
 *.pth
 *.pt
 *.onnx
-!model/best_model.pth
-!model/calibrator.pth
-!dist/onnx/*.onnx
 
 # Reports and logs
 *.pdf

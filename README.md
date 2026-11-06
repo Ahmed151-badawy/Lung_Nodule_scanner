@@ -242,3 +242,4 @@ python -m unittest discover tests
 > [!CAUTION]
 > **RESEARCH & INVESTIGATIONAL PROTOTYPE ONLY**  
 > This software system is developed strictly for research, benchmarking, and educational purposes. It is **NOT** a certified Medical Device (SaMD) and has not received clearance or approval from the U.S. Food and Drug Administration (FDA), CE marking under the European Medical Device Regulation (EU MDR), or equivalent health authorities. It must **NOT** be used as a primary diagnostic tool or to guide direct patient management without qualified radiologist over-read. All clinical decisions remain the sole legal responsibility of the licensed treating medical team.
+
